@@ -30,7 +30,14 @@
         "data_description": {
           "station": "Välj den hållplats du vill övervaka avgångar från."
         }
-      }
+      },
+      "mode": {"title": "Välj typ av övervakning", "description": "Välj om du vill visa en avgångstavla för en hållplats eller reseförslag mellan två hållplatser.", "data": {"entry_type": "Typ av övervakning"}},
+      "reconfigure": {"title": "Ändra resa", "description": "Ändra reseinställningar eller välj ny start- och målhållplats.", "data": {"change_route": "Ändra start eller mål"}},
+      "origin": {"title": "Var börjar resan?", "description": "Sök efter hållplatsen du vill resa från. I nästa steg väljer du rätt hållplats bland sökresultaten.", "data": {"location": "Starthållplats eller GID"}, "data_description": {"location": "Skriv ett hållplatsnamn, till exempel Lerum, eller hållplatsens 16-siffriga Västtrafik-GID."}},
+      "destination": {"title": "Vart vill du resa?", "description": "Sök efter målhållplatsen. I nästa steg väljer du rätt hållplats bland sökresultaten.", "data": {"location": "Målhållplats eller GID"}, "data_description": {"location": "Skriv ett hållplatsnamn, till exempel Göteborg Central, eller hållplatsens 16-siffriga Västtrafik-GID."}},
+      "select_origin": {"title": "Välj starthållplats", "description": "Välj hållplatsen där resan börjar.", "data": {"location": "Starthållplats"}},
+      "select_destination": {"title": "Välj målhållplats", "description": "Välj hållplatsen där resan slutar.", "data": {"location": "Målhållplats"}},
+      "journey_options": {"title": "Reseinställningar", "description": "Välj hur många av de kommande turerna som ska visas och begränsa vid behov transportsätten. Tågtyp används bara tillsammans med Tåg.", "data": {"journey_limit": "Antal turer", "transport_modes": "Transportsätt", "transport_sub_modes": "Tågtyp"}}
     },
     "error": {
       "cannot_connect": "Kunde inte ansluta till Västtrafiks API. Kontrollera din internetanslutning.",
@@ -40,7 +47,30 @@
       "unknown": "Ett oväntat fel inträffade. Kontrollera Home Assistant-loggarna för detaljer."
     },
     "abort": {
-      "already_configured": "Denna hållplats är redan konfigurerad. Välj en annan hållplats eller ta bort den befintliga först."
+      "already_configured": "Den här hållplatsen eller resan är redan konfigurerad. Välj en annan eller ta bort den befintliga först.",
+      "reconfigure_successful": "Resans konfiguration har uppdaterats.",
+      "reconfigure_not_supported": "Den här konfigurationstypen kan inte ändras här."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {"title": "Konfiguration", "description": "Välj vilken typ av övervakning du vill konfigurera.", "data": {"entry_type": "Typ av övervakning"}},
+      "journey_action": {"title": "Konfigurera resa", "description": "Välj om du vill ändra rutten eller vilka reseinställningar som visas.", "data": {"action": "Vad vill du ändra?"}},
+      "station": {"title": "Byt hållplats för avgångstavla", "data": {"station_query": "Hållplatsnamn eller GID"}},
+      "select_station": {"title": "Välj hållplats", "data": {"station": "Hållplats"}},
+      "origin": {"title": "Var börjar resan?", "description": "Ange hållplatsen du reser från. Sök med namn eller ange Västtrafiks 16-siffriga GID direkt.", "data": {"origin_query": "Starthållplats eller GID"}, "data_description": {"origin_query": "Exempel: Lerum, eller ett 16-siffrigt GID för hållplatsområdet."}},
+      "destination": {"title": "Vart vill du resa?", "description": "Ange hållplatsen du reser till. Sök med namn eller ange Västtrafiks 16-siffriga GID direkt.", "data": {"destination_query": "Målhållplats eller GID"}, "data_description": {"destination_query": "Exempel: Göteborg Central, eller ett 16-siffrigt GID för hållplatsområdet."}},
+      "select_origin": {"title": "Välj starthållplats", "data": {"origin_selection": "Starthållplats"}},
+      "select_destination": {"title": "Välj målhållplats", "data": {"destination_selection": "Målhållplats"}},
+      "journey_options": {"title": "Reseinställningar", "data": {"journey_limit": "Antal turer", "transport_modes": "Transportsätt", "transport_sub_modes": "Tågtyp"}}
+    },
+    "error": {
+      "cannot_connect": "Kunde inte ansluta till Västtrafiks API. Kontrollera din internetanslutning.",
+      "invalid_auth": "Ogiltig autentiseringsnyckel. Verifiera att du kopierat hela nyckeln från developer.vasttrafik.se.",
+      "no_stations_found": "Inga hållplatser hittades. Försök med ett annat sökord eller kontrollera stavningen."
+    },
+    "abort": {
+      "already_configured": "Den här hållplatsen eller resan är redan konfigurerad. Välj en annan eller ta bort den befintliga först."
     }
   }
 }

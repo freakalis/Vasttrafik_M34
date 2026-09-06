@@ -10,6 +10,7 @@ import aiohttp
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import (
     CoordinatorEntity,
@@ -17,7 +18,7 @@ from homeassistant.helpers.update_coordinator import (
     UpdateFailed,
 )
 
-from .const import DOMAIN
+from .const import CONF_ENTRY_TYPE, CONF_TRANSPORT_MODES, CONF_TRANSPORT_SUB_MODES, DOMAIN, ENTRY_TYPE_JOURNEYS
 
 if TYPE_CHECKING:
     from . import VasttrafikConfigEntry
@@ -38,14 +39,19 @@ async def async_setup_entry(
 ) -> None:
     """Set up Västtrafik M34 sensor based on a config entry."""
     auth_key = entry.data["auth_key"]
-    station_gid = entry.data["station_gid"]
-    station_name = entry.data["station_name"]
+    is_journey = (
+        entry.data.get(CONF_ENTRY_TYPE) == ENTRY_TYPE_JOURNEYS
+        or "origin_gid" in entry.data
+    )
+    station_gid = entry.data.get("station_gid") or f"{entry.data['origin_gid']}_{entry.data['destination_gid']}"
+    station_name = entry.data.get("station_name") or f"{entry.data['origin_name']} → {entry.data['destination_name']}"
     
     # Create coordinator
     coordinator = VasttrafikDataUpdateCoordinator(
         hass,
         auth_key=auth_key,
         station_gid=station_gid,
+        journey_config={**entry.data, **entry.options} if is_journey else None,
     )
     
     # Fetch initial data
@@ -53,10 +59,22 @@ async def async_setup_entry(
     
     # Store coordinator in runtime_data
     entry.runtime_data = coordinator
+
+    # Keep the entity identity stable when a user changes route or monitor type.
+    # Earlier Journey entries used their stop GIDs as the unique ID.
+    unique_id = f"{entry.entry_id}_monitor"
+    entity_registry = er.async_get(hass)
+    for registry_entry in er.async_entries_for_config_entry_id(
+        entity_registry, entry.entry_id
+    ):
+        if registry_entry.platform == DOMAIN and registry_entry.unique_id != unique_id:
+            entity_registry.async_update_entity(
+                registry_entry.entity_id, new_unique_id=unique_id
+            )
     
     # Create sensor
     async_add_entities(
-        [VasttrafikM34Sensor(coordinator, station_name, station_gid)],
+        [VasttrafikM34Sensor(coordinator, station_name, station_gid, unique_id)],
         True,
     )
 
@@ -69,6 +87,7 @@ class VasttrafikDataUpdateCoordinator(DataUpdateCoordinator):
         hass: HomeAssistant,
         auth_key: str,
         station_gid: str,
+        journey_config: dict[str, Any] | None = None,
     ) -> None:
         """Initialize the coordinator."""
         super().__init__(
@@ -79,6 +98,7 @@ class VasttrafikDataUpdateCoordinator(DataUpdateCoordinator):
         )
         self._auth_key = auth_key
         self._station_gid = station_gid
+        self._journey_config = journey_config
         self._access_token: str | None = None
         self._token_expires_at: datetime | None = None
     
@@ -126,6 +146,8 @@ class VasttrafikDataUpdateCoordinator(DataUpdateCoordinator):
         try:
             # Get valid access token
             access_token = await self._get_access_token()
+            if self._journey_config:
+                return await self._async_update_journeys(access_token)
             
             # Fetch departures
             headers = {
@@ -212,6 +234,31 @@ class VasttrafikDataUpdateCoordinator(DataUpdateCoordinator):
             _LOGGER.exception("Unexpected error during data update: %s", ex)
             raise UpdateFailed(f"Unexpected error: {ex}") from ex
 
+    async def _async_update_journeys(self, access_token: str) -> dict[str, Any]:
+        """Fetch journey suggestions between the configured origin and destination."""
+        config = self._journey_config
+        params: dict[str, Any] = {"originGid": config["origin_gid"], "destinationGid": config["destination_gid"], "limit": config["journey_limit"]}
+        if config.get(CONF_TRANSPORT_MODES):
+            params["transportModes"] = config[CONF_TRANSPORT_MODES]
+        if config.get(CONF_TRANSPORT_SUB_MODES):
+            params["transportSubModes"] = config[CONF_TRANSPORT_SUB_MODES]
+        async with aiohttp.ClientSession() as session:
+            async with session.get(f"{API_BASE}/journeys", headers={"Authorization": f"Bearer {access_token}"}, params=params) as response:
+                if response.status != 200:
+                    raise UpdateFailed(f"Failed to get journeys: {response.status}")
+                result = await response.json()
+        journeys = []
+        for journey in result.get("results", []):
+            legs = journey.get("tripLegs", [])
+            first, last = (legs[0], legs[-1]) if legs else ({}, {})
+            journeys.append({
+                "departure_time": first.get("estimatedOtherwisePlannedDepartureTime", first.get("plannedDepartureTime")),
+                "arrival_time": last.get("estimatedOtherwisePlannedArrivalTime", last.get("plannedArrivalTime")),
+                "duration": journey.get("durationInMinutes"),
+                "legs": legs,
+            })
+        return {"journeys": journeys, "last_update": datetime.now().isoformat()}
+
 
 class VasttrafikM34Sensor(CoordinatorEntity, SensorEntity):
     """Representation of a Västtrafik M34 sensor."""
@@ -224,13 +271,14 @@ class VasttrafikM34Sensor(CoordinatorEntity, SensorEntity):
         coordinator: VasttrafikDataUpdateCoordinator,
         station_name: str,
         station_gid: str,
+        unique_id: str,
     ) -> None:
         """Initialize the sensor."""
         super().__init__(coordinator)
         
         self._station_name = station_name
         self._station_gid = station_gid
-        self._attr_unique_id = f"vasttrafik_{station_gid}"
+        self._attr_unique_id = unique_id
         self._attr_icon = "mdi:tram"
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, station_gid)},
@@ -251,6 +299,8 @@ class VasttrafikM34Sensor(CoordinatorEntity, SensorEntity):
         if not self.coordinator.data:
             return None
         
+        if self.coordinator.data.get("journeys") is not None:
+            return f"{len(self.coordinator.data['journeys'])} resor"
         departures = self.coordinator.data.get("departures", [])
         if not departures:
             return "Inga avgångar"
@@ -263,6 +313,13 @@ class VasttrafikM34Sensor(CoordinatorEntity, SensorEntity):
         """Return the state attributes."""
         if not self.coordinator.data:
             return {}
+
+        if self.coordinator.data.get("journeys") is not None:
+            return {
+                "journeys": self.coordinator.data["journeys"],
+                "journey_count": len(self.coordinator.data["journeys"]),
+                "last_update": self.coordinator.data.get("last_update"),
+            }
         
         departures = self.coordinator.data.get("departures", [])
         last_update = self.coordinator.data.get("last_update")

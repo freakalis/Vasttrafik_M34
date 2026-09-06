@@ -11,7 +11,7 @@ from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
 
-from .const import DOMAIN
+from .const import CONF_ENTRY_TYPE, DOMAIN, ENTRY_TYPE_JOURNEYS
 
 if TYPE_CHECKING:
     from .sensor import VasttrafikDataUpdateCoordinator
@@ -27,7 +27,16 @@ VasttrafikConfigEntry: TypeAlias = "ConfigEntry[VasttrafikDataUpdateCoordinator]
 async def async_setup_entry(hass: HomeAssistant, entry: VasttrafikConfigEntry) -> bool:
     """Set up Västtrafik M34 from a config entry."""
     # Validate that we have the required data
-    if "auth_key" not in entry.data or "station_gid" not in entry.data:
+    is_journey = (
+        entry.data.get(CONF_ENTRY_TYPE) == ENTRY_TYPE_JOURNEYS
+        or "origin_gid" in entry.data
+    )
+    has_location_data = (
+        "origin_gid" in entry.data and "destination_gid" in entry.data
+        if is_journey
+        else "station_gid" in entry.data
+    )
+    if "auth_key" not in entry.data or not has_location_data:
         _LOGGER.error("Missing required data in config entry")
         return False
     

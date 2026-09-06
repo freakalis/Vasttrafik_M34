@@ -30,7 +30,14 @@
         "data_description": {
           "station": "Choose the station you want to monitor for departures."
         }
-      }
+      },
+      "mode": {"title": "Choose monitoring type", "description": "Choose whether you want a departure board for one stop or journey suggestions between two stops.", "data": {"entry_type": "Monitoring type"}},
+      "reconfigure": {"title": "Configure journey", "description": "Change journey settings or choose new origin and destination stops.", "data": {"change_route": "Change origin or destination"}},
+      "origin": {"title": "Where does the journey start?", "description": "Search for the stop you are travelling from. You will choose the exact stop from the search results in the next step.", "data": {"location": "Departure stop name or GID"}, "data_description": {"location": "Enter a stop name, for example Lerum, or its 16-digit Västtrafik GID."}},
+      "destination": {"title": "Where are you travelling to?", "description": "Search for the destination stop. You will choose the exact stop from the search results in the next step.", "data": {"location": "Destination stop name or GID"}, "data_description": {"location": "Enter a stop name, for example Göteborg Central, or its 16-digit Västtrafik GID."}},
+      "select_origin": {"title": "Choose departure stop", "description": "Choose the stop where the journey starts.", "data": {"location": "Departure stop"}},
+      "select_destination": {"title": "Choose destination stop", "description": "Choose the stop where the journey ends.", "data": {"location": "Destination stop"}},
+      "journey_options": {"title": "Journey settings", "description": "Choose how many of the next trips to show and optionally limit the transport modes. Train types only apply when Train is selected.", "data": {"journey_limit": "Number of trips", "transport_modes": "Transport type", "transport_sub_modes": "Train type"}}
     },
     "error": {
       "cannot_connect": "Failed to connect to Västtrafik API. Check your internet connection.",
@@ -40,7 +47,30 @@
       "unknown": "Unexpected error occurred. Check Home Assistant logs for details."
     },
     "abort": {
-      "already_configured": "This station is already configured. Choose a different station or remove the existing one first."
+      "already_configured": "This stop or journey is already configured. Choose a different one or remove the existing entry first.",
+      "reconfigure_successful": "Journey configuration updated.",
+      "reconfigure_not_supported": "This configuration type cannot be changed here."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {"title": "Configuration", "description": "Choose the type of monitoring you want to configure.", "data": {"entry_type": "Monitoring type"}},
+      "journey_action": {"title": "Configure journey", "description": "Choose whether to change the route or the displayed journey settings.", "data": {"action": "What do you want to change?"}},
+      "station": {"title": "Change departure board stop", "data": {"station_query": "Stop name or GID"}},
+      "select_station": {"title": "Choose stop", "data": {"station": "Stop"}},
+      "origin": {"title": "Where does the journey start?", "description": "Enter the stop you travel from. Search by name or enter the 16-digit Västtrafik GID directly.", "data": {"origin_query": "Departure stop name or GID"}, "data_description": {"origin_query": "Example: Lerum, or a 16-digit stop-area GID."}},
+      "destination": {"title": "Where are you travelling to?", "description": "Enter the stop you travel to. Search by name or enter the 16-digit Västtrafik GID directly.", "data": {"destination_query": "Destination stop name or GID"}, "data_description": {"destination_query": "Example: Göteborg Central, or a 16-digit stop-area GID."}},
+      "select_origin": {"title": "Choose departure stop", "data": {"origin_selection": "Departure stop"}},
+      "select_destination": {"title": "Choose destination stop", "data": {"destination_selection": "Destination stop"}},
+      "journey_options": {"title": "Journey settings", "data": {"journey_limit": "Number of trips", "transport_modes": "Transport type", "transport_sub_modes": "Train type"}}
+    },
+    "error": {
+      "cannot_connect": "Failed to connect to Västtrafik API. Check your internet connection.",
+      "invalid_auth": "Invalid authentication key. Verify you copied the full key from developer.vasttrafik.se.",
+      "no_stations_found": "No stops found. Try a different search term or check spelling."
+    },
+    "abort": {
+      "already_configured": "This stop or journey is already configured. Choose a different one or remove the existing entry first."
     }
   }
 }
